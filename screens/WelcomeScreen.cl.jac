@@ -615,7 +615,16 @@ def:pub WelcomeScreen(props: any) -> JsxElement {
                 <div className="lp-footer-inner">
                     <div className="lp-footer-attribution">
                         <div>University of Michigan · EECS 449</div>
-                        <div className="lp-footer-attribution-sub">Built with Jaseci · © 2026 MaizeMind</div>
+                        <div className="lp-footer-attribution-sub built-with-jaseci">
+                            <span>Built with </span>
+                            <img
+                                src="https://www.jaseci.org/_next/image?url=%2Fimages%2Flogo.png&w=128&q=75"
+                                alt="Jaseci logo"
+                                className="built-with-jaseci-logo"
+                            />
+                            <span className="built-with-jaseci-wordmark">JASECI</span>
+                            <span> · © 2026 MaizeMind</span>
+                        </div>
                     </div>
                     <div className="lp-footer-links">
                         <button className="lp-footer-link" onClick={openEulaReadOnly}>End User License Agreement</button>

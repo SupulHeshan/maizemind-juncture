@@ -5722,6 +5722,26 @@ body {
     color: #94a3b8;
 }
 
+.built-with-jaseci {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.built-with-jaseci-logo {
+    height: 14px;
+    width: auto;
+    vertical-align: middle;
+}
+
+.built-with-jaseci-wordmark {
+    font-family: "Montserrat", "Helvetica Neue", Arial, sans-serif;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    color: #ffffff;
+    font-size: 12px;
+}
+
 .lp-footer-links {
     display: flex;
     gap: 20px;
