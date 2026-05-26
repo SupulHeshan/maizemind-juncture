@@ -615,14 +615,21 @@ def:pub WelcomeScreen(props: any) -> JsxElement {
                 <div className="lp-footer-inner">
                     <div className="lp-footer-attribution">
                         <div>University of Michigan · EECS 449</div>
-                        <div className="lp-footer-attribution-sub built-with-jaseci">
-                            <span>Built with </span>
-                            <img
-                                src="https://www.jaseci.org/_next/image?url=%2Fimages%2Flogo.png&w=128&q=75"
-                                alt="Jaseci logo"
-                                className="built-with-jaseci-logo"
-                            />
-                            <span className="built-with-jaseci-wordmark">JASECI</span>
+                        <div className="lp-footer-attribution-sub">
+                            <a
+                                className="built-with-jaseci"
+                                href="https://jaseci.org"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                            >
+                                <span>Built with </span>
+                                <img
+                                    src="https://www.jaseci.org/_next/image?url=%2Fimages%2Flogo.png&w=128&q=75"
+                                    alt="Jaseci logo"
+                                    className="built-with-jaseci-logo"
+                                />
+                                <span className="built-with-jaseci-wordmark">JASECI</span>
+                            </a>
                             <span> · © 2026 MaizeMind</span>
                         </div>
                     </div>
