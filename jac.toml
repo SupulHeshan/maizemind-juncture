@@ -46,11 +46,9 @@ max_tokens = 1500
 namespace = "maizemind-juncture"
 domain = "www.maizemind.com"
 cert_manager_email = "maya.hillegonds1@gmail.com"
-
-[plugins.scale.secrets]
-ANTHROPIC_API_KEY = "${ANTHROPIC_API_KEY}"
-
-[plugins.scale.kubernetes]
 liveness_initial_delay = 300
 liveness_failure_threshold = 10
 readiness_initial_delay = 60
+
+[plugins.scale.secrets]
+ANTHROPIC_API_KEY = "${ANTHROPIC_API_KEY}"
