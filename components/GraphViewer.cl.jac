@@ -1,270 +1,14 @@
 """MaizeMind - Interactive Argument Graph Viewer Component.
-Renders nodes/edges as an interactive zoomable graph.
-Handles branch selection, zoom-to-node, and per-branch LLM context.
+Renders nodes/edges as an interactive zoomable SVG graph.
+Handles branch selection, zoom-to-node, and pan/zoom controls."""
 
-Place this file at: components/GraphViewer.jac
-"""
-
-
-# ============================================================
-# 1. BRANCH CONTEXT SYSTEM
-#    Stores LLM working history per-branch so switching
-#    branches doesn't lose context.
-# ============================================================
-
-"Stores one revision event for a node"
-obj RevisionEntry {
-    has timestamp: str,
-        action: str,          # what the user did
-        before_text: str,
-        after_text: str,
-        llm_reasoning: str;   # why the LLM suggested this
-}
-
-"Per-node context that travels with the node"
-obj NodeContext {
-    has node_id: str,
-        revision_history: list[RevisionEntry] = [],
-        branch_summary: str = "",    # LLM summary of this subtree's state
-        working_notes: str = "";     # LLM's in-progress reasoning for this branch
-}
-
-"Manages all branch contexts for the session"
-obj BranchContextStore {
-    has contexts: dict[str, NodeContext] = {};
-
-    """Get or create context for a node"""
-    def get_context(node_id: str) -> NodeContext {
-        if node_id not in self.contexts {
-            self.contexts[node_id] = NodeContext(node_id=node_id);
-        }
-        return self.contexts[node_id];
-    }
-
-    """Gather full branch context: walk from node up to root,
-    then collect all context in that subtree. Returns a string
-    the LLM can use to understand the branch state."""
-    def gather_branch_context(
-        node_id: str,
-        nodes: list,
-        edges: list
-    ) -> str {
-        # Build parent map
-        parent_map: dict[str, str] = {};
-        children_map: dict[str, list[str]] = {};
-        for e in edges {
-            if e["type"] in ["supports", "depends_on"] {
-                parent_map[e["from_id"]] = e["to_id"];
-                if e["to_id"] not in children_map {
-                    children_map[e["to_id"]] = [];
-                }
-                children_map[e["to_id"]].append(e["from_id"]);
-            }
-        }
-
-        # Walk up to find branch root
-        branch_root = node_id;
-        visited: list[str] = [];
-        current = node_id;
-        while current in parent_map and current not in visited {
-            visited.append(current);
-            current = parent_map[current];
-            branch_root = current;
-        }
-
-        # Collect all nodes in this subtree
-        subtree_ids: list[str] = [];
-        queue: list[str] = [branch_root];
-        while queue {
-            nid = queue.pop(0);
-            subtree_ids.append(nid);
-            if nid in children_map {
-                for child in children_map[nid] {
-                    queue.append(child);
-                }
-            }
-        }
-
-        # Build context string from all nodes in branch
-        node_map: dict[str, str] = {};
-        for n in nodes {
-            node_map[n["id"]] = f"[{n['type']}] {n['text']}";
-        }
-
-        context_parts: list[str] = ["=== Branch Context ==="];
-        context_parts.append(f"Branch root: {branch_root}");
-        context_parts.append(f"Selected node: {node_id}");
-        context_parts.append(f"Nodes in branch: {len(subtree_ids)}");
-        context_parts.append("");
-
-        for sid in subtree_ids {
-            label = node_map.get(sid, sid);
-            context_parts.append(f"  {sid}: {label}");
-            ctx = self.get_context(sid);
-            if ctx.working_notes {
-                context_parts.append(f"    [LLM notes]: {ctx.working_notes}");
-            }
-            if ctx.revision_history {
-                last_rev = ctx.revision_history[-1];
-                context_parts.append(f"    [Last revision]: {last_rev.action}");
-            }
-        }
-
-        return "\n".join(context_parts);
-    }
-
-    """Save LLM working notes for a branch after interaction"""
-    def save_working_notes(node_id: str, notes: str) -> None {
-        ctx = self.get_context(node_id);
-        ctx.working_notes = notes;
-    }
-
-    """Record a revision to a node"""
-    def record_revision(
-        node_id: str,
-        action: str,
-        before_text: str,
-        after_text: str,
-        llm_reasoning: str
-    ) -> None {
-        ctx = self.get_context(node_id);
-        import from datetime { datetime }
-        ctx.revision_history.append(
-            RevisionEntry(
-                timestamp=datetime.now().isoformat(),
-                action=action,
-                before_text=before_text,
-                after_text=after_text,
-                llm_reasoning=llm_reasoning
-            )
-        );
-    }
-}
-
-
-# ============================================================
-# 2. GRAPH LAYOUT ENGINE
-#    Assigns x,y positions using tree layout (BFS from root)
-# ============================================================
-
-"Position info for a node"
-obj NodePosition {
-    has node_id: str,
-        x: float,
-        y: float,
-        level: int = 0;
-}
-
-"""Calculate tree layout positions for all nodes.
-Returns list of NodePosition objects."""
-def calculate_layout(
-    nodes: list[dict[str, str]],
-    edges: list[dict[str, str]],
-    canvas_width: float = 1200.0,
-    level_height: float = 150.0
-) -> list[NodePosition] {
-
-    if not nodes {
-        return [];
-    }
-
-    # Build adjacency: find children (nodes that this node supports/depends)
-    children_map: dict[str, list[str]] = {};
-    has_parent: list[str] = [];
-
-    for e in edges {
-        parent_id = e.get("to_id", "");
-        child_id = e.get("from_id", "");
-        if e.get("type", "") in ["supports", "depends_on"] {
-            if parent_id not in children_map {
-                children_map[parent_id] = [];
-            }
-            children_map[parent_id].append(child_id);
-            has_parent.append(child_id);
-        }
-    }
-
-    # Find root nodes (no parent)
-    all_ids = [n.get("id", "") for n in nodes];
-    roots = [nid for nid in all_ids if nid not in has_parent];
-
-    # If no clear root, use the first thesis or first node
-    if not roots {
-        thesis = [n.get("id", "") for n in nodes if n.get("type", "") == "thesis"];
-        roots = thesis if thesis else [all_ids[0]];
-    }
-
-    # BFS to assign levels
-    level_map: dict[str, int] = {};
-    queue: list[str] = [];
-    for r in roots {
-        queue.append(r);
-        level_map[r] = 0;
-    }
-
-    while queue {
-        current = queue.pop(0);
-        current_level = level_map.get(current, 0);
-        children = children_map.get(current, []);
-        for child in children {
-            if child not in level_map {
-                level_map[child] = current_level + 1;
-                queue.append(child);
-            }
-        }
-    }
-
-    # Assign any orphans
-    for nid in all_ids {
-        if nid not in level_map {
-            level_map[nid] = 0;
-        }
-    }
-
-    # Group by level
-    levels: dict[int, list[str]] = {};
-    for nid in all_ids {
-        lvl = level_map[nid];
-        if lvl not in levels {
-            levels[lvl] = [];
-        }
-        levels[lvl].append(nid);
-    }
-
-    # Calculate positions
-    positions: list[NodePosition] = [];
-    for lvl in levels {
-        nodes_at_level = levels[lvl];
-        count = len(nodes_at_level);
-        spacing = canvas_width / (count + 1);
-
-        for (i, nid) in enumerate(nodes_at_level) {
-            positions.append(NodePosition(
-                node_id=nid,
-                x=spacing * (i + 1),
-                y=80.0 + lvl * level_height,
-                level=lvl
-            ));
-        }
-    }
-
-    return positions;
-}
-
-
-# ============================================================
-# 3. GRAPH VIEWER - Client-side React component
-#    Renders the interactive graph with zoom/pan/click
-# ============================================================
-
-cl {
 
 """Interactive argument graph with zoom, pan, and node selection.
 Props:
   - graph_nodes: list of node dicts from the pipeline
   - graph_edges: list of edge dicts from the pipeline
   - on_node_select: callback when a node is clicked
-  - on_branch_focus: callback when zooming into a branch"""
+  - on_branch_focus: callback when double-clicking to zoom into a branch"""
 def:pub GraphViewer(
     graph_nodes: list = [],
     graph_edges: list = [],
@@ -285,45 +29,40 @@ def:pub GraphViewer(
 
     # --- Node colors by type ---
     def get_node_color(node_type: str) -> str {
-        if node_type == "thesis" { return "#8b5cf6"; }     # purple
-        if node_type == "claim" { return "#3b82f6"; }      # blue
-        if node_type == "evidence" { return "#10b981"; }    # green
-        if node_type == "assumption" { return "#f59e0b"; }  # yellow
-        if node_type == "counterarg" { return "#ef4444"; }  # red
-        return "#6b7280";  # gray fallback
+        if node_type == "thesis" { return "#8b5cf6"; }
+        if node_type == "claim" { return "#3b82f6"; }
+        if node_type == "evidence" { return "#10b981"; }
+        if node_type == "assumption" { return "#f59e0b"; }
+        if node_type == "counterarg" { return "#ef4444"; }
+        return "#6b7280";
     }
 
-    # --- Status border color ---
     def get_status_color(status: str) -> str {
-        if status == "ok" { return "#10b981"; }         # green
-        if status == "needs_work" { return "#f59e0b"; } # yellow
-        if status == "missing" { return "#ef4444"; }    # red
-        return "#d1d5db";  # gray
+        if status == "ok" { return "#10b981"; }
+        if status == "needs_work" { return "#f59e0b"; }
+        if status == "missing" { return "#ef4444"; }
+        return "#d1d5db";
     }
 
-    # --- Edge colors by type ---
     def get_edge_color(edge_type: str) -> str {
-        if edge_type == "supports" { return "#10b981"; }    # green
-        if edge_type == "contradicts" { return "#ef4444"; }  # red
-        if edge_type == "depends_on" { return "#f59e0b"; }   # yellow
-        if edge_type == "addresses" { return "#8b5cf6"; }    # purple
+        if edge_type == "supports" { return "#10b981"; }
+        if edge_type == "contradicts" { return "#ef4444"; }
+        if edge_type == "depends_on" { return "#f59e0b"; }
+        if edge_type == "addresses" { return "#8b5cf6"; }
         return "#9ca3af";
     }
 
-    # --- Edge dash pattern ---
     def get_edge_dash(edge_type: str) -> str {
         if edge_type == "contradicts" { return "8,4"; }
         if edge_type == "depends_on" { return "6,3"; }
         return "none";
     }
 
-    # --- Calculate layout positions ---
+    # BFS tree layout: returns {node_id: {x, y}} for all nodes
     def get_positions() -> dict[str, dict[str, float]] {
-        # Simple dict-based layout for client side
         pos_map: dict[str, dict[str, float]] = {};
         if not graph_nodes { return pos_map; }
 
-        # Build children map
         children_map: dict[str, list[str]] = {};
         has_parent: list[str] = [];
         for e in graph_edges {
@@ -344,7 +83,6 @@ def:pub GraphViewer(
             roots = [all_ids[0]];
         }
 
-        # BFS levels
         level_map: dict[str, int] = {};
         queue: list[str] = [];
         for r in roots {
@@ -366,7 +104,6 @@ def:pub GraphViewer(
             }
         }
 
-        # Group by level
         levels: dict[int, list[str]] = {};
         for nid in all_ids {
             lvl = level_map[nid];
@@ -376,7 +113,6 @@ def:pub GraphViewer(
             levels[lvl].append(nid);
         }
 
-        # Position
         w = 1000.0;
         lh = 160.0;
         for lvl in levels {
@@ -404,7 +140,6 @@ def:pub GraphViewer(
         positions = get_positions();
         if node_id in positions {
             p = positions[node_id];
-            # Center on node and zoom in
             zoom_level = 2.0;
             pan_x = -(p["x"] * 2.0 - 500.0);
             pan_y = -(p["y"] * 2.0 - 300.0);
@@ -451,8 +186,6 @@ def:pub GraphViewer(
 
     # --- Render ---
     positions = get_positions();
-
-    # SVG dimensions
     svg_w = 1000;
     svg_h = max(600, len(graph_nodes) * 80);
 
@@ -510,7 +243,6 @@ def:pub GraphViewer(
                                 fy = from_p.get("y", 0);
                                 tx = to_p.get("x", 0);
                                 ty = to_p.get("y", 0);
-                                # Bezier control points for smooth curves
                                 mid_y = (fy + ty) / 2;
                                 ec = get_edge_color(e.get("type", ""));
                                 ed = get_edge_dash(e.get("type", ""));
@@ -636,6 +368,4 @@ def:pub GraphViewer(
                 Click: select · Double-click: zoom to branch · Scroll: zoom · Drag: pan
             </div>
         </div>;
-}
-
 }
