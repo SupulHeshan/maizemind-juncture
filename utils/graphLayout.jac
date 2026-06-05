@@ -39,11 +39,11 @@ def calculate_layout(
         }
     }
 
-    all_ids = [n.get("id", "") for n in nodes];
+    all_ids = [n["id"] for n in nodes if n.get("id")];
     roots = [nid for nid in all_ids if nid not in has_parent];
 
     if not roots {
-        thesis = [n.get("id", "") for n in nodes if n.get("type", "") == "thesis"];
+        thesis = [n["id"] for n in nodes if n.get("id") and n.get("type", "") == "thesis"];
         roots = thesis if thesis else [all_ids[0]];
     }
 
