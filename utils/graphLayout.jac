@@ -83,7 +83,7 @@ def calculate_layout(
     }
 
     positions: list[NodePosition] = [];
-    for lvl in levels {
+    for lvl in sorted(levels) {
         nodes_at_level = levels[lvl];
         count = len(nodes_at_level);
         spacing = canvas_width / (count + 1);
