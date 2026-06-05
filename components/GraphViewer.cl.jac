@@ -89,8 +89,10 @@ def:pub GraphViewer(
             queue.append(r);
             level_map[r] = 0;
         }
-        while queue {
-            cur = queue.pop(0);
+        qi = 0;
+        while qi < len(queue) {
+            cur = queue[qi];
+            qi += 1;
             for child in children_map.get(cur, []) {
                 if child not in level_map {
                     level_map[child] = level_map[cur] + 1;

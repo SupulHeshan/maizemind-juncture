@@ -62,8 +62,10 @@ obj BranchContextStore {
 
         subtree_ids: list[str] = [];
         queue: list[str] = [branch_root];
-        while queue {
-            nid = queue.pop(0);
+        qi = 0;
+        while qi < len(queue) {
+            nid = queue[qi];
+            qi += 1;
             subtree_ids.append(nid);
             if nid in children_map {
                 for child in children_map[nid] {

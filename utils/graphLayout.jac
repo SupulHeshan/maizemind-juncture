@@ -54,8 +54,10 @@ def calculate_layout(
         level_map[r] = 0;
     }
 
-    while queue {
-        current = queue.pop(0);
+    qi = 0;
+    while qi < len(queue) {
+        current = queue[qi];
+        qi += 1;
         current_level = level_map.get(current, 0);
         for child in children_map.get(current, []) {
             if child not in level_map {
