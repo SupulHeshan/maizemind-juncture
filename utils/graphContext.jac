@@ -62,6 +62,7 @@ obj BranchContextStore {
 
         subtree_ids: list[str] = [];
         queue: list[str] = [branch_root];
+        seen: dict[str, bool] = {branch_root: True};
         qi = 0;
         while qi < len(queue) {
             nid = queue[qi];
@@ -69,7 +70,10 @@ obj BranchContextStore {
             subtree_ids.append(nid);
             if nid in children_map {
                 for child in children_map[nid] {
-                    queue.append(child);
+                    if child not in seen {
+                        seen[child] = True;
+                        queue.append(child);
+                    }
                 }
             }
         }
