@@ -77,7 +77,7 @@ def:pub GraphViewer(
             }
         }
 
-        all_ids = [n.get("id", "") for n in graph_nodes];
+        all_ids = [n["id"] for n in graph_nodes if n.get("id")];
         roots = [nid for nid in all_ids if nid not in has_parent];
         if not roots {
             roots = [all_ids[0]];
@@ -117,7 +117,7 @@ def:pub GraphViewer(
 
         w = 1000.0;
         lh = 160.0;
-        for lvl in levels {
+        for lvl in sorted(levels) {
             ns = levels[lvl];
             cnt = len(ns);
             sp = w / (cnt + 1);

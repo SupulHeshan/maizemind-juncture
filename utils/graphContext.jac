@@ -52,10 +52,10 @@ obj BranchContextStore {
         }
 
         branch_root = node_id;
-        visited: list[str] = [];
+        visited: dict[str, bool] = {};
         current = node_id;
         while current in parent_map and current not in visited {
-            visited.append(current);
+            visited[current] = True;
             current = parent_map[current];
             branch_root = current;
         }
