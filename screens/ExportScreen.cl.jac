@@ -362,7 +362,6 @@ def:pub ExportScreen(props: any) -> JsxElement {
         if not ctx.userId or not ctx.isLoggedIn or saved { return; }
         graphId = currentGraph["id"] if currentGraph and "id" in currentGraph else "";
         await root spawn CreateSession(
-            userId=ctx.userId,
             graphId=graphId,
             notes="",
             score=currentScore

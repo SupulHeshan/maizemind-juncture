@@ -3,27 +3,18 @@
 import time;
 import from graph.user_nodes { User }
 
-walker:pub CreateUser {
+walker:priv CreateUser {
     has name: str,
         email: str,
-        userType: str = "student",
-        isGuest: bool = False;
+        userType: str = "student";
 
     can run with Root entry {
-        for user in [-->](?:User) {
-            if user.email == self.email {
-                report {"error": "account_exists", "id": user.id};
-                return;
-            }
-        }
-
         new_user = (root ++> User(
             id=f"user_{int(time.time())}",
             name=self.name,
             email=self.email,
             userType=self.userType,
-            createdAt=str(int(time.time())),
-            isGuest=self.isGuest
+            createdAt=str(int(time.time()))
         ))[0];
 
         report new_user;
@@ -31,59 +22,32 @@ walker:pub CreateUser {
 }
 
 
-walker:pub GetUserProfile {
-    has userId: str;
-
+walker:priv GetUserProfile {
     can run with Root entry {
-        user_node = None;
-
-        for user in [-->](?:User) {
-            if user.id == self.userId or user.email == self.userId {
-                user_node = user;
-                break;
-            }
-        }
-
-        report user_node;
+        users = [-->](?:User);
+        report users[0] if users else None;
     }
 }
 
 
-walker:pub GetUserByEmail {
-    has email: str;
-
+walker:priv GetUserByEmail {
     can run with Root entry {
-        user_node = None;
-
-        for user in [-->](?:User) {
-            if user.email == self.email {
-                user_node = user;
-                break;
-            }
-        }
-
-        report user_node;
+        users = [-->](?:User);
+        report users[0] if users else None;
     }
 }
 
 
-walker:pub UpdateUserProfile {
-    has userId: str,
-        name: str = None,
+walker:priv UpdateUserProfile {
+    has name: str = None,
         userType: str = None,
         goals: list[str] = None,
         theme: str = None,
         accessibilityMode: bool = None;
 
     can run with Root entry {
-        user_node = None;
-
-        for user in [-->](?:User) {
-            if user.id == self.userId or user.email == self.userId {
-                user_node = user;
-                break;
-            }
-        }
+        users = [-->](?:User);
+        user_node = users[0] if users else None;
 
         if not user_node {
             report {"error": "User not found"};
@@ -101,16 +65,11 @@ walker:pub UpdateUserProfile {
 }
 
 
-walker:pub GetCurrentUser {
+walker:priv GetCurrentUser {
     can run with Root entry {
         try {
-            user = None;
-            for u in [-->](?:User) {
-                if not u.isGuest {
-                    user = u;
-                    break;
-                }
-            }
+            users = [-->](?:User);
+            user = users[0] if users else None;
 
             if not user {
                 report {"authenticated": False, "isGuest": True};

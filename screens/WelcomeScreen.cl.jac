@@ -74,16 +74,6 @@ def:pub WelcomeScreen(props: any) -> JsxElement {
 
         loading = True;
 
-        try {
-            existing_result = await root spawn GetUserByEmail(email=email);
-            existing_user = existing_result["reports"][0] if existing_result["reports"] else None;
-            if existing_user and "id" in existing_user {
-                error = "An account with this email already exists. Please log in instead.";
-                loading = False;
-                return;
-            }
-        } except Exception {}
-
         signup_result = await jacSignup(email, password);
         if not signup_result["success"] {
             error = signup_result["error"] if "error" in signup_result else "Signup failed";
@@ -102,15 +92,9 @@ def:pub WelcomeScreen(props: any) -> JsxElement {
         try {
             result = await root spawn CreateUser(
                 name=name if name else email.split("@")[0],
-                email=email,
-                isGuest=False
+                email=email
             );
             user_data = result["reports"][0] if result["reports"] else {};
-            if "error" in user_data and user_data["error"] == "account_exists" {
-                error = "An account with this email already exists. Please log in instead.";
-                loading = False;
-                return;
-            }
             userId = user_data["id"] if "id" in user_data else "";
         } except Exception {}
 
@@ -140,7 +124,7 @@ def:pub WelcomeScreen(props: any) -> JsxElement {
         password = "";
 
         try {
-            result = await root spawn GetUserByEmail(email=saved_email);
+            result = await root spawn GetUserByEmail();
             user_data = result["reports"][0] if result["reports"] else {};
             if user_data and "id" in user_data {
                 is_dark = "theme" in user_data and user_data["theme"] == "dark";

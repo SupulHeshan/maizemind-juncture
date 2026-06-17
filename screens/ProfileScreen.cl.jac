@@ -45,7 +45,7 @@ def:pub ProfileScreen(props: any) -> JsxElement {
         }
 
         try {
-            result = await root spawn GetUserByEmail(email=ctx.userEmail);
+            result = await root spawn GetUserByEmail();
             data = result["reports"][0] if result["reports"] else {};
 
             if not data or "id" not in data {
@@ -65,7 +65,7 @@ def:pub ProfileScreen(props: any) -> JsxElement {
 
             if local_userId {
                 try {
-                    sess_result = await root spawn GetUserSessions(userId=local_userId);
+                    sess_result = await root spawn GetUserSessions();
                     raw_sessions = sess_result["reports"][0] if sess_result["reports"] else [];
                     sessions = raw_sessions if raw_sessions else [];
                 } except Exception as e {
@@ -73,7 +73,7 @@ def:pub ProfileScreen(props: any) -> JsxElement {
                 }
 
                 try {
-                    stats_result = await root spawn CalculateUserStats(userId=local_userId);
+                    stats_result = await root spawn CalculateUserStats();
                     local_stats = stats_result["reports"][0] if stats_result["reports"] else None;
                 } except Exception as e {
                     print(f"Error loading stats: {e}");
@@ -104,7 +104,6 @@ def:pub ProfileScreen(props: any) -> JsxElement {
 
     async def handleSaveProfile() -> None {
         await root spawn UpdateUserProfile(
-            userId=userId,
             name=name,
             userType=userType,
             goals=goals,
@@ -116,7 +115,6 @@ def:pub ProfileScreen(props: any) -> JsxElement {
     async def handleSaveTheme(new_theme: str) -> None {
         theme = new_theme;
         await root spawn UpdateUserProfile(
-            userId=userId,
             name=name,
             userType=userType,
             goals=goals,
@@ -126,9 +124,8 @@ def:pub ProfileScreen(props: any) -> JsxElement {
     }
 
     async def handleOpenSession(sessionId: str) -> None {
-        local_userId = userId;
         try {
-            result = await root spawn GetSessionGraph(sessionId=sessionId, userId=local_userId);
+            result = await root spawn GetSessionGraph(sessionId=sessionId);
             data = result["reports"][0] if result["reports"] else {};
             if "error" in data {
                 print(f"GetSessionGraph error: {data['error']}");
@@ -187,8 +184,7 @@ def:pub ProfileScreen(props: any) -> JsxElement {
     }
 
     async def handleDeleteSession(sessionId: str) -> None {
-        local_userId = userId;
-        await root spawn DeleteSession(sessionId=sessionId, userId=local_userId);
+        await root spawn DeleteSession(sessionId=sessionId);
         confirmDeleteSessionId = "";
         loadContext();
     }
