@@ -52,17 +52,23 @@ def:pub ArgumentNodeComponent(props: any) -> JsxElement {
     score_val = node_score;
     str_color = "#16a34a" if score_val >= 70 else ("#ca8a04" if score_val >= 50 else "#dc2626");
 
+    # Layout constants — must stay in sync with ArgumentGraphView.NODE_W/NODE_H
+    NODE_W    = 200;  # node width
+    HEADER_H  = 26;   # colored header strip height
+    MAX_CHARS = 26;   # chars per wrapped line
+    MAX_LINES = 3;    # lines before truncation
+    LINE_H    = 17;   # px per text line (font-size 11.5 + leading)
+
     # Wrap text into lines
-    max_chars = 26;
     lines: list = [];
-    if len(node_content) <= max_chars {
+    if len(node_content) <= MAX_CHARS {
         lines = [node_content];
     } else {
         words = node_content.split(" ");
         cur = "";
         for w in words {
             test = (cur + " " + w).trim() if cur else w;
-            if len(test) <= max_chars {
+            if len(test) <= MAX_CHARS {
                 cur = test;
             } else {
                 if cur { lines.append(cur); }
@@ -70,11 +76,11 @@ def:pub ArgumentNodeComponent(props: any) -> JsxElement {
             }
         }
         if cur { lines.append(cur); }
-        lines = lines[:3];
+        lines = lines[:MAX_LINES];
     }
 
-    w = 200;
-    h = max(70, 32 + len(lines) * 17 + 12);
+    w = NODE_W;
+    h = max(70, HEADER_H + 6 + len(lines) * LINE_H + 12);
     base_opacity = "0.5" if isGhost else "1";
     opacity_val = "0.15" if isDimmed else base_opacity;
 
@@ -86,7 +92,7 @@ def:pub ArgumentNodeComponent(props: any) -> JsxElement {
     line_elements = [];
     line_idx = 0;
     for line_text in lines {
-        y_pos = -h/2 + 34 + line_idx * 17 + 12;
+        y_pos = -h/2 + HEADER_H + 8 + line_idx * LINE_H + 12;
         line_elements.append(
             <text key={str(line_idx)} x="0" y={str(y_pos)}
                 fontSize="11.5" fontWeight="500" textAnchor="middle"
