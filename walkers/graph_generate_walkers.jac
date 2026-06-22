@@ -4,12 +4,11 @@ import from graph.argument_graph_nodes { ArgumentGraph }
 import from src.graph_generator { Document, generate_argument_graph }
 
 walker:pub GenerateArgumentGraph {
-    has notes: str,
-        userId: str;
+    has notes: str;
 
     can run with Root entry {
         print("=== GenerateArgumentGraph ENTERED ===");
-        print(f"=== userId={self.userId}, notes length={len(self.notes)} ===");
+        print(f"=== notes length={len(self.notes)} ===");
         try {
         import time;
         graph_id = f"graph_{int(time.time())}";

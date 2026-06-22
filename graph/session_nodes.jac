@@ -6,6 +6,5 @@ node Session {
         title: str,
         initialScore: int,
         finalScore: int,
-        userId: str = "",
         notes: str = "";
 }

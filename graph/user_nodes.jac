@@ -10,6 +10,5 @@ node User {
         strengths: list[str] = [],
         weaknesses: list[str] = [],
         theme: str = "light",
-        accessibilityMode: bool = False,
-        isGuest: bool = False;
+        accessibilityMode: bool = False;
 }

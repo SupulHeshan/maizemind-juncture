@@ -4,9 +4,8 @@ import from datetime { datetime }
 import from graph.session_nodes { Session }
 import from graph.argument_graph_nodes { ArgumentGraph }
 
-walker:pub CreateSession {
-    has userId: str,
-        graphId: str,
+walker:priv CreateSession {
+    has graphId: str,
         notes: str,
         score: dict;
 
@@ -35,7 +34,6 @@ walker:pub CreateSession {
         new_session = (root ++> Session(
             id=f"session_{timestamp}",
             date=str(datetime.now().isoformat()),
-            userId=self.userId,
             title=title,
             initialScore=self.score["overall"],
             finalScore=self.score["overall"],
@@ -49,7 +47,6 @@ walker:pub CreateSession {
         report {
             "id": new_session.id,
             "date": new_session.date,
-            "userId": new_session.userId,
             "title": new_session.title,
             "initialScore": new_session.initialScore,
             "finalScore": new_session.finalScore,
@@ -58,24 +55,19 @@ walker:pub CreateSession {
     }
 }
 
-walker:pub GetUserSessions {
-    has userId: str;
-
+walker:priv GetUserSessions {
     can run with Root entry {
         sessions = [];
 
         for s in [-->](?:Session) {
-            if s.userId == self.userId {
-                sessions.append({
-                    "id": s.id,
-                    "date": s.date,
-                    "userId": s.userId,
-                    "title": s.title,
-                    "initialScore": s.initialScore,
-                    "finalScore": s.finalScore,
-                    "notes": s.notes
-                });
-            }
+            sessions.append({
+                "id": s.id,
+                "date": s.date,
+                "title": s.title,
+                "initialScore": s.initialScore,
+                "finalScore": s.finalScore,
+                "notes": s.notes
+            });
         }
 
         report sessions;
@@ -83,17 +75,9 @@ walker:pub GetUserSessions {
 }
 
 
-walker:pub CalculateUserStats {
-    has userId: str;
-
+walker:priv CalculateUserStats {
     can run with Root entry {
-        sessions = [];
-
-        for s in [-->](?:Session) {
-            if s.userId == self.userId {
-                sessions.append(s);
-            }
-        }
+        sessions = [-->](?:Session);
 
         total_sessions = len(sessions);
 
@@ -121,13 +105,12 @@ walker:pub CalculateUserStats {
     }
 }
 
-walker:pub DeleteSession {
-    has sessionId: str,
-        userId: str;
+walker:priv DeleteSession {
+    has sessionId: str;
 
     can run with Root entry {
         for s in [-->](?:Session) {
-            if s.id == self.sessionId and s.userId == self.userId {
+            if s.id == self.sessionId {
                 del s;
                 break;
             }
@@ -136,13 +119,12 @@ walker:pub DeleteSession {
     }
 }
 
-walker:pub GetSessionGraph {
-    has sessionId: str,
-        userId: str;
+walker:priv GetSessionGraph {
+    has sessionId: str;
 
     can run with Root entry {
         for s in [-->](?:Session) {
-            if s.id == self.sessionId and s.userId == self.userId {
+            if s.id == self.sessionId {
                 visit s;
                 return;
             }

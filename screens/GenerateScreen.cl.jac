@@ -56,8 +56,7 @@ def:pub GenerateScreen(props: any) -> JsxElement {
         try {
             combined_uploaded = uploadedFiles.map(lambda f -> any { return f["content"]; }).join("\n");
             result = await root spawn GenerateArgumentGraph(
-                notes=notes + combined_uploaded,
-                userId=currentUserId
+                notes=notes + combined_uploaded
             );
 
             data = result["reports"][0] if result["reports"] else {};
